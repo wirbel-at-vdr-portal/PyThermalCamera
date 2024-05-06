@@ -315,12 +315,10 @@ while(cap.isOpened()):
 
 		if keyPress == ord('q'): #enable fullscreen
 			dispFullscreen = True
-			cv2.namedWindow('Thermal',cv2.WND_PROP_FULLSCREEN)
 			cv2.setWindowProperty('Thermal',cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
 		if keyPress == ord('w'): #disable fullscreen
 			dispFullscreen = False
-			cv2.namedWindow('Thermal',cv2.WINDOW_GUI_NORMAL)
-			cv2.setWindowProperty('Thermal',cv2.WND_PROP_AUTOSIZE,cv2.WINDOW_GUI_NORMAL)
+			cv2.setWindowProperty('Thermal',cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_GUI_NORMAL)
 			cv2.resizeWindow('Thermal', newWidth,newHeight)
 
 		if keyPress == ord('f'): #contrast+
