@@ -32,6 +32,17 @@ import time
 import io
 import platform
 
+font = cv2.FONT_HERSHEY_SIMPLEX
+
+# see lazarus or delphi for naming. BGR, not RGB!
+clBlack         = (  0,  0,  0)
+clWhite         = (255,255,255)
+clRed           = (  0,  0,255)
+clBlue          = (255,  0,  0)
+clYellow        = (  0,255,255)
+clDarkWashedRed = ( 40, 40,255)
+
+
 #We need to know if we are running on the Pi, because openCV behaves a little oddly on all the builds!
 #https://raspberrypi.stackexchange.com/questions/5100/detect-that-a-python-program-is-running-on-the-pi
 def is_raspberrypi():
@@ -57,9 +68,9 @@ if platform.system() == 'Windows':
    cap = cv2.VideoCapture(int(dev))
 else:
    cap = cv2.VideoCapture('/dev/video'+str(dev), cv2.CAP_V4L)
-#cap = cv2.VideoCapture(0)
-#pull in the video but do NOT automatically convert to RGB, else it breaks the temperature data!
-#https://stackoverflow.com/questions/63108721/opencv-setting-videocap-property-to-cap-prop-convert-rgb-generates-weird-boolean
+
+# pull in the video but do NOT automatically convert to RGB, else it breaks the temperature data!
+# https://stackoverflow.com/questions/63108721/opencv-setting-videocap-property-to-cap-prop-convert-rgb-generates-weird-boolean
 if isPi == True:
    cap.set(cv2.CAP_PROP_CONVERT_RGB, 0.0)
 else:
@@ -68,39 +79,43 @@ else:
    except TypeError:
       cap.set(cv2.CAP_PROP_CONVERT_RGB, 0)      # on Windows (and maybe other platforms) OpenCV expects 0 instead of False
 
-#256x192 General settings
-width = 256 #Sensor width
-height = 192 #sensor height
-scale = 3 #scale multiplier
-newWidth = width*scale 
-newHeight = height*scale
-alpha = 1.0               # gain   or 'contrast', (1.0-3.0)
-beta  = 0.0               # offset or 'brightness', +/- 100 in steps of ten
-colormap = 0
-font=cv2.FONT_HERSHEY_SIMPLEX
-fullscreen = False
-rotate = 0                # image not rotated, 0..3 clockwise
-cv2.namedWindow('Thermal',cv2.WINDOW_GUI_NORMAL)
-cv2.resizeWindow('Thermal', newWidth,newHeight)
-rad = 0 #blur radius
-threshold = 2
-osd = True
-recording = False
-elapsed = "00:00:00"
-snaptime = "None"
-frameCounter = 24;
+# General settings
+width = 256                 # raw video width
+height = 192                # raw video height
+scale = 3                   # video upscaling multiplier
+newWidth  = width  * scale  # will change
+newHeight = height * scale  # will change  
+alpha = 1.0                 # gain   or 'contrast', (1.0-3.0)
+beta  = 0.0                 # offset or 'brightness', +/- 100 in steps of ten
+rad = 0                     # image smoothing filter radius for blur
+colormap = 0                # color map index
+fullscreen = False          # fullscreeen or windowed
+rotate = 0                  # image not rotated, 0..3 clockwise
+threshold = 2               # mark points below or above average temp
+osd = True                  # show osd
+recording = False           # don't record by default
+elapsed = "00:00:00"        # recording - elapsed time
+snaptime = "None"           # may be removed later
+frameCounter = 24;          # initialized to update center, min, may temp
 
-clBlack         = (  0,  0,  0)
-clRed           = (  0,  0,255)
-clBlue          = (255,  0,  0)
-clYellow        = (  0,255,255)
-clDarkWashedRed = ( 40, 40,255)
 
 def rec():
    now = time.strftime("%Y%m%d--%H%M%S")
    #do NOT use mp4 here, it is flakey!
    videoOut = cv2.VideoWriter(now+'output.avi', cv2.VideoWriter_fourcc(*'XVID'),25, (newWidth,newHeight))
    return(videoOut)
+
+def ToUint16(t, row, col):
+   return t[row][col][0] | (t[row][col][1] << 8)
+
+def calctemp(u):
+   return (u/64.0) - 273.15
+
+
+
+cv2.namedWindow("TC001",cv2.WINDOW_GUI_NORMAL)
+cv2.resizeWindow("TC001", newWidth,newHeight)
+
 
 while(cap.isOpened()):
    # Capture frame-by-frame
@@ -114,52 +129,37 @@ while(cap.isOpened()):
       #https://www.eevblog.com/forum/thermal-imaging/infiray-and-their-p2-pro-discussion/200/
       #Huge props to LeoDJ for figuring out how the data is stored and how to compute temp from it.
       #grab data from the center pixel...
-      hi = thdata[96][128][0]
-      lo = thdata[96][128][1]
-      #print(hi,lo)
-      lo = lo*256
-      rawtemp = hi+lo
-      #print(rawtemp)
-      temp = (rawtemp/64)-273.15
-      temp = round(temp,2)
-      #print(temp)
-      #break
 
       frameCounter += 1
       if frameCounter >= 12:
          frameCounter = 0
 
-         #find the max temperature in the frame
-         lomax = thdata[...,1].max()
-         posmax = thdata[...,1].argmax()
-         #since argmax returns a linear index, convert back to row and col
-         mcol,mrow = divmod(posmax,width)
-         himax = thdata[mcol][mrow][0]
-         lomax=lomax*256
-         maxtemp = himax+lomax
-         maxtemp = (maxtemp/64)-273.15
-         maxtemp = round(maxtemp,2)
-      
-         #find the lowest temperature in the frame
-         lomin = thdata[...,1].min()
-         posmin = thdata[...,1].argmin()
-         #since argmax returns a linear index, convert back to row and col
-         lcol,lrow = divmod(posmin,width)
-         himin = thdata[lcol][lrow][0]
-         lomin=lomin*256
-         mintemp = himin+lomin
-         mintemp = (mintemp/64)-273.15
-         mintemp = round(mintemp,2)
+         temp = round(calctemp(ToUint16(thdata, 96, 128)), 1)
 
-         #find the average temperature in the frame
-         loavg = thdata[...,1].mean()
-         hiavg = thdata[...,0].mean()
-         loavg=loavg*256
-         avgtemp = loavg+hiavg
-         avgtemp = (avgtemp/64)-273.15
-         avgtemp = round(avgtemp,2)
+         Max = 0
+         Min = 65535
+         Sum = 0.0
+         MinRow = 0
+         MinCol = 0
+         MaxRow = 0
+         MaxCol = 0
 
-      
+         for row in range (0, 192):
+            for col in range(0, 256):
+               u = ToUint16(thdata, row, col)
+               if u < Min:
+                  Min = u
+                  MinRow = row
+                  MinCol = col
+               if u > Max:
+                  Max = u
+                  MaxRow = row
+                  MaxCol = col
+               Sum += u
+         Avg = Sum/(192 * 256);
+         maxtemp = round(calctemp(Max), 1)
+         mintemp = round(calctemp(Min), 1)
+         avgtemp = round(calctemp(Avg), 1)
 
       # Convert the real image to RGB
       bgr = cv2.cvtColor(imdata,  cv2.COLOR_YUV2BGR_YUYV)
@@ -215,37 +215,30 @@ while(cap.isOpened()):
             cmapText = 'Inv Rainbow'
 
       # draw crosshairs
-      cv2.line(heatmap,(int(newWidth/2),int(newHeight/2)+20),\
-      (int(newWidth/2),int(newHeight/2)-20),(255,255,255),2) #vline
-      cv2.line(heatmap,(int(newWidth/2)+20,int(newHeight/2)),\
-      (int(newWidth/2)-20,int(newHeight/2)),(255,255,255),2) #hline
-
-      cv2.line(heatmap,(int(newWidth/2),int(newHeight/2)+20),\
-      (int(newWidth/2),int(newHeight/2)-20),(0,0,0),1) #vline
-      cv2.line(heatmap,(int(newWidth/2)+20,int(newHeight/2)),\
-      (int(newWidth/2)-20,int(newHeight/2)),(0,0,0),1) #hline
+      cv2.line(heatmap,(int(newWidth/2),int(newHeight/2)+20),       (int(newWidth/2)   ,int(newHeight/2)-20), clWhite, 2) #vline
+      cv2.line(heatmap,(int(newWidth/2),int(newHeight/2)+20),       (int(newWidth/2)   ,int(newHeight/2)-20), clBlack, 1) #vline      
+      cv2.line(heatmap,(int(newWidth/2)+20,int(newHeight/2)),       (int(newWidth/2)-20,int(newHeight/2))   , clWhite, 2) #hline
+      cv2.line(heatmap,(int(newWidth/2)+20,int(newHeight/2)),       (int(newWidth/2)-20,int(newHeight/2))   , clBlack, 1) #hline
       #show temp
-      cv2.putText(heatmap,str(temp)+' C', (int(newWidth/2)+10, int(newHeight/2)-10),\
-      cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0, 0, 0), 2, cv2.LINE_AA)
-      cv2.putText(heatmap,str(temp)+' C', (int(newWidth/2)+10, int(newHeight/2)-10),\
-      cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0, 255, 255), 1, cv2.LINE_AA)
+      cv2.putText(heatmap,str(temp)+' C', (int(newWidth/2)+10, int(newHeight/2)-10), font, 0.45, clBlack , 2, cv2.LINE_AA)
+      cv2.putText(heatmap,str(temp)+' C', (int(newWidth/2)+10, int(newHeight/2)-10), font, 0.45, clYellow, 1, cv2.LINE_AA)
     
       #Yeah, this looks like we can probably do this next bit more efficiently!
       #display floating max temp
       if maxtemp > avgtemp+threshold:
          match(rotate):
             case 0:
-               x = mrow
-               y = mcol
+               x = MaxCol
+               y = MaxRow
             case 1:
-               x = width - mcol
-               y = mrow
+               x = width - MaxRow
+               y = MaxCol
             case 2:
-               x = width - mrow
-               y = height - mcol
+               x = width - MaxCol
+               y = height - MaxRow
             case 3:
-               x = mcol
-               y = height - mrow          
+               x = MaxRow
+               y = height - MaxCol          
          cv2.circle(heatmap, (x*scale, y*scale), 5, clBlack, 2)
          cv2.circle(heatmap, (x*scale, y*scale), 5, clRed  ,-1)
          cv2.putText(heatmap,str(maxtemp)+' C', ((x*scale)+10, (y*scale)+5), font, 0.45, clBlack , 2, cv2.LINE_AA)
@@ -255,17 +248,17 @@ while(cap.isOpened()):
       if mintemp < avgtemp-threshold:
          match(rotate):
             case 0:
-               x = lrow
-               y = lcol
+               x = MinCol
+               y = MinRow
             case 1:
-               x = width - lcol
-               y = lrow
+               x = width - MinRow
+               y = MinCol
             case 2:
-               x = width - lrow
-               y = height - lcol
+               x = width - MinCol
+               y = height - MinRow
             case 3:
-               x = lcol
-               y = height - lrow
+               x = MinRow
+               y = height - MinCol
          cv2.circle(heatmap, (x*scale, y*scale), 5, clBlack, 2)
          cv2.circle(heatmap, (x*scale, y*scale), 5, clBlue ,-1)
          cv2.putText(heatmap,str(mintemp)+' C', ((x*scale)+10, (y*scale)+5), font, 0.45, clBlack , 2, cv2.LINE_AA)
@@ -308,7 +301,7 @@ while(cap.isOpened()):
             p += 14
 
       #display image
-      cv2.imshow('Thermal',heatmap)
+      cv2.imshow("TC001",heatmap)
 
       if recording == True:
          elapsed = (time.time() - start)
@@ -327,20 +320,20 @@ while(cap.isOpened()):
             newWidth  = width  * scale 
             newHeight = height * scale
             if not fullscreen and not isPi:
-               cv2.resizeWindow('Thermal', newWidth, newHeight)
+               cv2.resizeWindow("TC001", newWidth, newHeight)
          case '-':        # decrease scale
             scale = max(1, scale - 1)
             newWidth  = width  * scale 
             newHeight = height * scale
             if not fullscreen and not isPi:
-               cv2.resizeWindow('Thermal', newWidth, newHeight)
+               cv2.resizeWindow("TC001", newWidth, newHeight)
          case 'f':        # toggle fullscreen
             fullscreen = not fullscreen
             if fullscreen:
-               cv2.setWindowProperty('Thermal', cv2.WND_PROP_FULLSCREEN, 1.0);
+               cv2.setWindowProperty("TC001", cv2.WND_PROP_FULLSCREEN, 1.0);
             else:
-               cv2.setWindowProperty('Thermal', cv2.WND_PROP_FULLSCREEN, 0.0);
-               cv2.resizeWindow('Thermal', newWidth, newHeight);
+               cv2.setWindowProperty("TC001", cv2.WND_PROP_FULLSCREEN, 0.0);
+               cv2.resizeWindow("TC001", newWidth, newHeight);
          case 'm':        # toggle menu
             osd = not osd
          case 'b':        # toggle through brightnesss values
@@ -363,7 +356,7 @@ while(cap.isOpened()):
             newWidth  = width  * scale
             newHeight = height * scale
             if not fullscreen:
-               cv2.resizeWindow('Thermal', newWidth, newHeight);
+               cv2.resizeWindow("TC001", newWidth, newHeight);
          case 's':        # toggle through image smoothing radius values
             rad += 1
             if rad > 5:
