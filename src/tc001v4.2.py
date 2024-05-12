@@ -167,42 +167,41 @@ while(cap.isOpened()):
          bgr = cv2.blur(bgr,(rad,rad))
 
       #apply colormap
-      if colormap == 0:
-         heatmap = cv2.applyColorMap(bgr, cv2.COLORMAP_JET)
-         cmapText = 'Jet'
-      if colormap == 1:
-         heatmap = cv2.applyColorMap(bgr, cv2.COLORMAP_HOT)
-         cmapText = 'Hot'
-      if colormap == 2:
-         heatmap = cv2.applyColorMap(bgr, cv2.COLORMAP_MAGMA)
-         cmapText = 'Magma'
-      if colormap == 3:
-         heatmap = cv2.applyColorMap(bgr, cv2.COLORMAP_INFERNO)
-         cmapText = 'Inferno'
-      if colormap == 4:
-         heatmap = cv2.applyColorMap(bgr, cv2.COLORMAP_PLASMA)
-         cmapText = 'Plasma'
-      if colormap == 5:
-         heatmap = cv2.applyColorMap(bgr, cv2.COLORMAP_BONE)
-         cmapText = 'Bone'
-      if colormap == 6:
-         heatmap = cv2.applyColorMap(bgr, cv2.COLORMAP_SPRING)
-         cmapText = 'Spring'
-      if colormap == 7:
-         heatmap = cv2.applyColorMap(bgr, cv2.COLORMAP_AUTUMN)
-         cmapText = 'Autumn'
-      if colormap == 8:
-         heatmap = cv2.applyColorMap(bgr, cv2.COLORMAP_VIRIDIS)
-         cmapText = 'Viridis'
-      if colormap == 9:
-         heatmap = cv2.applyColorMap(bgr, cv2.COLORMAP_PARULA)
-         cmapText = 'Parula'
-      if colormap == 10:
-         heatmap = cv2.applyColorMap(bgr, cv2.COLORMAP_RAINBOW)
-         heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)
-         cmapText = 'Inv Rainbow'
-
-      #print(heatmap.shape)
+      match(colormap):
+         case 0:
+            heatmap = cv2.applyColorMap(bgr, cv2.COLORMAP_JET)
+            cmapText = 'Jet'
+         case 1:
+            heatmap = cv2.applyColorMap(bgr, cv2.COLORMAP_HOT)
+            cmapText = 'Hot'
+         case 2:
+            heatmap = cv2.applyColorMap(bgr, cv2.COLORMAP_MAGMA)
+            cmapText = 'Magma'
+         case 3:
+            heatmap = cv2.applyColorMap(bgr, cv2.COLORMAP_INFERNO)
+            cmapText = 'Inferno'
+         case 4:
+            heatmap = cv2.applyColorMap(bgr, cv2.COLORMAP_PLASMA)
+            cmapText = 'Plasma'
+         case 5:
+            heatmap = cv2.applyColorMap(bgr, cv2.COLORMAP_BONE)
+            cmapText = 'Bone'
+         case 6:
+            heatmap = cv2.applyColorMap(bgr, cv2.COLORMAP_SPRING)
+            cmapText = 'Spring'
+         case 7:
+            heatmap = cv2.applyColorMap(bgr, cv2.COLORMAP_AUTUMN)
+            cmapText = 'Autumn'
+         case 8:
+            heatmap = cv2.applyColorMap(bgr, cv2.COLORMAP_VIRIDIS)
+            cmapText = 'Viridis'
+         case 9:
+            heatmap = cv2.applyColorMap(bgr, cv2.COLORMAP_PARULA)
+            cmapText = 'Parula'
+         case 10:
+            heatmap = cv2.applyColorMap(bgr, cv2.COLORMAP_RAINBOW)
+            heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)
+            cmapText = 'Inv Rainbow'
 
       # draw crosshairs
       cv2.line(heatmap,(int(newWidth/2),int(newHeight/2)+20),\
@@ -280,83 +279,79 @@ while(cap.isOpened()):
          elapsed = time.strftime("%H:%M:%S", time.gmtime(elapsed)) 
          #print(elapsed)
          videoOut.write(heatmap)
-      
+
       keyPress = cv2.waitKey(1)
-      if keyPress == ord('a'): #Increase blur radius
-         rad += 1
-      if keyPress == ord('z'): #Decrease blur radius
-         rad -= 1
-         if rad <= 0:
-            rad = 0
-
-      if keyPress == ord('s'): #Increase threshold
-         threshold += 1
-      if keyPress == ord('x'): #Decrease threashold
-         threshold -= 1
-         if threshold <= 0:
-            threshold = 0
-
-      if keyPress == ord('d'): #Increase scale
-         scale += 1
-         if scale >=5:
-            scale = 5
-         newWidth = width*scale
-         newHeight = height*scale
-         if dispFullscreen == False and isPi == False:
+      if keyPress < 0:
+         continue
+      keyPress = chr(keyPress)
+      KEY_ESCAPE = chr(27)
+      match(keyPress):
+         case 'a': #Increase blur radius
+            rad += 1
+         case 'z': #Decrease blur radius
+            rad -= 1
+            if rad <= 0:
+               rad = 0
+         case 's': #Increase threshold
+            threshold += 1
+         case 'x': #Decrease threashold
+            threshold -= 1
+            if threshold <= 0:
+               threshold = 0
+         case 'd': #Increase scale
+            scale += 1
+            if scale >=5:
+               scale = 5
+            newWidth = width*scale
+            newHeight = height*scale
+            if dispFullscreen == False and isPi == False:
+               cv2.resizeWindow('Thermal', newWidth,newHeight)
+         case 'c': #Decrease scale
+            scale -= 1
+            if scale <= 1:
+               scale = 1
+            newWidth = width*scale
+            newHeight = height*scale
+            if dispFullscreen == False and isPi == False:
+               cv2.resizeWindow('Thermal', newWidth,newHeight)
+         case 'q': #enable fullscreen
+            dispFullscreen = True
+            cv2.setWindowProperty('Thermal',cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
+         case 'w': #disable fullscreen
+            dispFullscreen = False
+            cv2.setWindowProperty('Thermal',cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_GUI_NORMAL)
             cv2.resizeWindow('Thermal', newWidth,newHeight)
-      if keyPress == ord('c'): #Decrease scale
-         scale -= 1
-         if scale <= 1:
-            scale = 1
-         newWidth = width*scale
-         newHeight = height*scale
-         if dispFullscreen == False and isPi == False:
-            cv2.resizeWindow('Thermal', newWidth,newHeight)
-
-      if keyPress == ord('q'): #enable fullscreen
-         dispFullscreen = True
-         cv2.setWindowProperty('Thermal',cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
-      if keyPress == ord('w'): #disable fullscreen
-         dispFullscreen = False
-         cv2.setWindowProperty('Thermal',cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_GUI_NORMAL)
-         cv2.resizeWindow('Thermal', newWidth,newHeight)
-
-      if keyPress == ord('f'): #contrast+
-         alpha += 0.1
-         alpha = round(alpha,1)#fix round error
-         if alpha >= 3.0:
-            alpha=3.0
-      if keyPress == ord('v'): #contrast-
-         alpha -= 0.1
-         alpha = round(alpha,1)#fix round error
-         if alpha<=0:
-            alpha = 0.0
-
-
-      if keyPress == ord('h'):
-         if hud==True:
-            hud=False
-         elif hud==False:
-            hud=True
-
-      if keyPress == ord('m'): #m to cycle through color maps
-         colormap += 1
-         if colormap == 11:
-            colormap = 0
-
-      if keyPress == ord('r') and recording == False: #r to start reording
-         videoOut = rec()
-         recording = True
-         start = time.time()
-      if keyPress == ord('t'): #f to finish reording
-         recording = False
-         elapsed = "00:00:00"
-
-      if keyPress == ord('p'): #f to finish reording
-         snaptime = snapshot(heatmap)
-
-      if keyPress == 27: # ESC
-         break
+         case 'f': #contrast+
+            alpha += 0.1
+            alpha = round(alpha,1)#fix round error
+            if alpha >= 3.0:
+               alpha=3.0
+         case 'v': #contrast-
+            alpha -= 0.1
+            alpha = round(alpha,1)#fix round error
+            if alpha<=0:
+               alpha = 0.0
+         case 'h':
+            if hud==True:
+               hud=False
+            elif hud==False:
+               hud=True
+         case 'm': #m to cycle through color maps
+            colormap += 1
+            if colormap == 11:
+               colormap = 0
+         case 'r':
+            if notrecording: #r to start reording
+               videoOut = rec()
+               recording = True
+               start = time.time()
+         case 't': #f to finish reording
+            recording = False
+            elapsed = "00:00:00"
+         case 'p': #f to finish reording
+            snaptime = snapshot(heatmap)
+         case KEY_ESCAPE: # ESC
+            break
 cap.release()
 cv2.destroyAllWindows()
       
