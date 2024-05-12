@@ -228,6 +228,26 @@ while(cap.isOpened()):
       cv2.putText(heatmap,str(temp)+' C', (int(newWidth/2)+10, int(newHeight/2)-10),\
       cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0, 255, 255), 1, cv2.LINE_AA)
 
+      
+      #Yeah, this looks like we can probably do this next bit more efficiently!
+      #display floating max temp
+      if maxtemp > avgtemp+threshold:
+         cv2.circle(heatmap, (mrow*scale, mcol*scale), 5, (0,0,0), 2)
+         cv2.circle(heatmap, (mrow*scale, mcol*scale), 5, (0,0,255), -1)
+         cv2.putText(heatmap,str(maxtemp)+' C', ((mrow*scale)+10, (mcol*scale)+5),\
+         cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0,0,0), 2, cv2.LINE_AA)
+         cv2.putText(heatmap,str(maxtemp)+' C', ((mrow*scale)+10, (mcol*scale)+5),\
+         cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0, 255, 255), 1, cv2.LINE_AA)
+
+      #display floating min temp
+      if mintemp < avgtemp-threshold:
+         cv2.circle(heatmap, (lrow*scale, lcol*scale), 5, (0,0,0), 2)
+         cv2.circle(heatmap, (lrow*scale, lcol*scale), 5, (255,0,0), -1)
+         cv2.putText(heatmap,str(mintemp)+' C', ((lrow*scale)+10, (lcol*scale)+5),\
+         cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0,0,0), 2, cv2.LINE_AA)
+         cv2.putText(heatmap,str(mintemp)+' C', ((lrow*scale)+10, (lcol*scale)+5),\
+         cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0, 255, 255), 1, cv2.LINE_AA)
+
       if osd==True:
          clYellow        = (  0,255,255)
          clTelegrey4     = (200,200,200)
@@ -271,27 +291,6 @@ while(cap.isOpened()):
 
          cv2.putText(heatmap,'Close (ESC or q)'            , (10, p), font, 0.4, clYellow, 1, cv2.LINE_AA)
          p += 14
-
-
-      
-      #Yeah, this looks like we can probably do this next bit more efficiently!
-      #display floating max temp
-      if maxtemp > avgtemp+threshold:
-         cv2.circle(heatmap, (mrow*scale, mcol*scale), 5, (0,0,0), 2)
-         cv2.circle(heatmap, (mrow*scale, mcol*scale), 5, (0,0,255), -1)
-         cv2.putText(heatmap,str(maxtemp)+' C', ((mrow*scale)+10, (mcol*scale)+5),\
-         cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0,0,0), 2, cv2.LINE_AA)
-         cv2.putText(heatmap,str(maxtemp)+' C', ((mrow*scale)+10, (mcol*scale)+5),\
-         cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0, 255, 255), 1, cv2.LINE_AA)
-
-      #display floating min temp
-      if mintemp < avgtemp-threshold:
-         cv2.circle(heatmap, (lrow*scale, lcol*scale), 5, (0,0,0), 2)
-         cv2.circle(heatmap, (lrow*scale, lcol*scale), 5, (255,0,0), -1)
-         cv2.putText(heatmap,str(mintemp)+' C', ((lrow*scale)+10, (lcol*scale)+5),\
-         cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0,0,0), 2, cv2.LINE_AA)
-         cv2.putText(heatmap,str(mintemp)+' C', ((lrow*scale)+10, (lcol*scale)+5),\
-         cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0, 255, 255), 1, cv2.LINE_AA)
 
       #display image
       cv2.imshow('Thermal',heatmap)
