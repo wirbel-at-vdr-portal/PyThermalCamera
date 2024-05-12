@@ -88,6 +88,13 @@ osd = True
 recording = False
 elapsed = "00:00:00"
 snaptime = "None"
+frameCounter = 24;
+
+clBlack         = (  0,  0,  0)
+clRed           = (  0,  0,255)
+clBlue          = (255,  0,  0)
+clYellow        = (  0,255,255)
+clDarkWashedRed = ( 40, 40,255)
 
 def rec():
    now = time.strftime("%Y%m%d--%H%M%S")
@@ -118,36 +125,39 @@ while(cap.isOpened()):
       #print(temp)
       #break
 
-      #find the max temperature in the frame
-      lomax = thdata[...,1].max()
-      posmax = thdata[...,1].argmax()
-      #since argmax returns a linear index, convert back to row and col
-      mcol,mrow = divmod(posmax,width)
-      himax = thdata[mcol][mrow][0]
-      lomax=lomax*256
-      maxtemp = himax+lomax
-      maxtemp = (maxtemp/64)-273.15
-      maxtemp = round(maxtemp,2)
+      frameCounter += 1
+      if frameCounter >= 12:
+         frameCounter = 0
 
+         #find the max temperature in the frame
+         lomax = thdata[...,1].max()
+         posmax = thdata[...,1].argmax()
+         #since argmax returns a linear index, convert back to row and col
+         mcol,mrow = divmod(posmax,width)
+         himax = thdata[mcol][mrow][0]
+         lomax=lomax*256
+         maxtemp = himax+lomax
+         maxtemp = (maxtemp/64)-273.15
+         maxtemp = round(maxtemp,2)
       
-      #find the lowest temperature in the frame
-      lomin = thdata[...,1].min()
-      posmin = thdata[...,1].argmin()
-      #since argmax returns a linear index, convert back to row and col
-      lcol,lrow = divmod(posmin,width)
-      himin = thdata[lcol][lrow][0]
-      lomin=lomin*256
-      mintemp = himin+lomin
-      mintemp = (mintemp/64)-273.15
-      mintemp = round(mintemp,2)
+         #find the lowest temperature in the frame
+         lomin = thdata[...,1].min()
+         posmin = thdata[...,1].argmin()
+         #since argmax returns a linear index, convert back to row and col
+         lcol,lrow = divmod(posmin,width)
+         himin = thdata[lcol][lrow][0]
+         lomin=lomin*256
+         mintemp = himin+lomin
+         mintemp = (mintemp/64)-273.15
+         mintemp = round(mintemp,2)
 
-      #find the average temperature in the frame
-      loavg = thdata[...,1].mean()
-      hiavg = thdata[...,0].mean()
-      loavg=loavg*256
-      avgtemp = loavg+hiavg
-      avgtemp = (avgtemp/64)-273.15
-      avgtemp = round(avgtemp,2)
+         #find the average temperature in the frame
+         loavg = thdata[...,1].mean()
+         hiavg = thdata[...,0].mean()
+         loavg=loavg*256
+         avgtemp = loavg+hiavg
+         avgtemp = (avgtemp/64)-273.15
+         avgtemp = round(avgtemp,2)
 
       
 
@@ -219,31 +229,49 @@ while(cap.isOpened()):
       cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0, 0, 0), 2, cv2.LINE_AA)
       cv2.putText(heatmap,str(temp)+' C', (int(newWidth/2)+10, int(newHeight/2)-10),\
       cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0, 255, 255), 1, cv2.LINE_AA)
-
-      
+    
       #Yeah, this looks like we can probably do this next bit more efficiently!
       #display floating max temp
       if maxtemp > avgtemp+threshold:
-         cv2.circle(heatmap, (mrow*scale, mcol*scale), 5, (0,0,0), 2)
-         cv2.circle(heatmap, (mrow*scale, mcol*scale), 5, (0,0,255), -1)
-         cv2.putText(heatmap,str(maxtemp)+' C', ((mrow*scale)+10, (mcol*scale)+5),\
-         cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0,0,0), 2, cv2.LINE_AA)
-         cv2.putText(heatmap,str(maxtemp)+' C', ((mrow*scale)+10, (mcol*scale)+5),\
-         cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0, 255, 255), 1, cv2.LINE_AA)
+         match(rotate):
+            case 0:
+               x = mrow
+               y = mcol
+            case 1:
+               x = width - mcol
+               y = mrow
+            case 2:
+               x = width - mrow
+               y = height - mcol
+            case 3:
+               x = mcol
+               y = height - mrow          
+         cv2.circle(heatmap, (x*scale, y*scale), 5, clBlack, 2)
+         cv2.circle(heatmap, (x*scale, y*scale), 5, clRed  ,-1)
+         cv2.putText(heatmap,str(maxtemp)+' C', ((x*scale)+10, (y*scale)+5), font, 0.45, clBlack , 2, cv2.LINE_AA)
+         cv2.putText(heatmap,str(maxtemp)+' C', ((x*scale)+10, (y*scale)+5), font, 0.45, clYellow, 1, cv2.LINE_AA)
 
       #display floating min temp
       if mintemp < avgtemp-threshold:
-         cv2.circle(heatmap, (lrow*scale, lcol*scale), 5, (0,0,0), 2)
-         cv2.circle(heatmap, (lrow*scale, lcol*scale), 5, (255,0,0), -1)
-         cv2.putText(heatmap,str(mintemp)+' C', ((lrow*scale)+10, (lcol*scale)+5),\
-         cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0,0,0), 2, cv2.LINE_AA)
-         cv2.putText(heatmap,str(mintemp)+' C', ((lrow*scale)+10, (lcol*scale)+5),\
-         cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0, 255, 255), 1, cv2.LINE_AA)
+         match(rotate):
+            case 0:
+               x = lrow
+               y = lcol
+            case 1:
+               x = width - lcol
+               y = lrow
+            case 2:
+               x = width - lrow
+               y = height - lcol
+            case 3:
+               x = lcol
+               y = height - lrow
+         cv2.circle(heatmap, (x*scale, y*scale), 5, clBlack, 2)
+         cv2.circle(heatmap, (x*scale, y*scale), 5, clBlue ,-1)
+         cv2.putText(heatmap,str(mintemp)+' C', ((x*scale)+10, (y*scale)+5), font, 0.45, clBlack , 2, cv2.LINE_AA)
+         cv2.putText(heatmap,str(mintemp)+' C', ((x*scale)+10, (y*scale)+5), font, 0.45, clYellow, 1, cv2.LINE_AA)
 
       if osd==True:
-         clYellow        = (  0,255,255)
-         clDarkWashedRed = ( 40, 40,255)
-
          # display black box for our data
          cv2.rectangle(heatmap, (0, 0),(160, 160), (0,0,0), -1)
          p = 14
