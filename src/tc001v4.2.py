@@ -95,14 +95,6 @@ def rec():
    videoOut = cv2.VideoWriter(now+'output.avi', cv2.VideoWriter_fourcc(*'XVID'),25, (newWidth,newHeight))
    return(videoOut)
 
-def snapshot(heatmap):
-   #I would put colons in here, but it Win throws a fit if you try and open them!
-   now = time.strftime("%Y%m%d-%H%M%S") 
-   snaptime = time.strftime("%H:%M:%S")
-   cv2.imwrite("TC001"+now+".png", heatmap)
-   return snaptime
- 
-
 while(cap.isOpened()):
    # Capture frame-by-frame
    ret, frame = cap.read()
@@ -250,13 +242,7 @@ while(cap.isOpened()):
 
       if osd==True:
          clYellow        = (  0,255,255)
-         clTelegrey4     = (200,200,200)
          clDarkWashedRed = ( 40, 40,255)
-
-         if recording:
-            recColor = clDarkWashedRed
-         else:
-            recColor = clTelegrey4
 
          # display black box for our data
          cv2.rectangle(heatmap, (0, 0),(160, 160), (0,0,0), -1)
@@ -286,11 +272,12 @@ while(cap.isOpened()):
          cv2.putText(heatmap,'Snapshot (CTRL+s)'           , (10, p), font, 0.4, clYellow, 1, cv2.LINE_AA)
          p += 14
 
-         cv2.putText(heatmap,'Recording: '+elapsed         , (10, p), font, 0.4, recColor, 1, cv2.LINE_AA)
-         p += 14
-
          cv2.putText(heatmap,'Close (ESC or q)'            , (10, p), font, 0.4, clYellow, 1, cv2.LINE_AA)
          p += 14
+
+         if recording:
+            cv2.putText(heatmap,'Recording: '+elapsed         , (10, p), font, 0.4, clDarkWashedRed, 1, cv2.LINE_AA)
+            p += 14
 
       #display image
       cv2.imshow('Thermal',heatmap)
@@ -353,9 +340,6 @@ while(cap.isOpened()):
             rad += 1
             if rad > 5:
                rad = 0
-         case 'p':        # print snapshot to png 
-            snaptime = snapshot(heatmap)
-
          case '0':
             recording = not recording
             if recording:
