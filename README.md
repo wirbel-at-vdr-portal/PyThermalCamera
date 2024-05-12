@@ -78,7 +78,7 @@ This is in Alpha. No error checking has been implemented yet! So if the program 
 
 ## Key Bindings
 
-- +  -  : increase/decrease scale and image size
+- \+  \-  : increase/decrease scale and image size
 - f     : toggle fullscreen
 - m     : toggle menu
 - b     : toggle through brightnesss values
