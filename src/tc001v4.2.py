@@ -13,17 +13,17 @@ print('This will work on the Pi However a number of workarounds are implemented!
 print('Seemingly there are bugs in the compiled version of cv2 that ships with the Pi!')
 print('')
 print('Key Bindings:')
-print('')
-print('a z: Increase/Decrease Blur')
-print('s x: Floating High and Low Temp Label Threshold')
-print('d c: Change Interpolated scale Note: This will not change the window size on the Pi')
-print('f v: Contrast')
-print('q w: Fullscreen Windowed (note going back to windowed does not seem to work on the Pi!)')
-print('r t: Record and Stop')
-print('p : Snapshot')
-print('m : Cycle through ColorMaps')
-print('h : Toggle HUD')
-print('ESC: End Program')
+print("+ or -: change window size and bicubic interpolated scale")
+print("f     : toggle fullscreen window")
+print("m     : toggle menu")
+print("b     : toggle through brightness values")
+print("c     : toggle through contrast vallues")
+print("r     : rotate clockwise")
+print("s     : toggle through image smoothing radius values")
+print("v     : cycle through color maps")
+print("CTRL+s: snapshot to png")
+print("0     : toggle video recording")
+print("ESC, q: quit program")
 
 import cv2
 import numpy as np
@@ -74,15 +74,17 @@ height = 192 #sensor height
 scale = 3 #scale multiplier
 newWidth = width*scale 
 newHeight = height*scale
-alpha = 1.0 # Contrast control (1.0-3.0)
+alpha = 1.0               # gain   or 'contrast', (1.0-3.0)
+beta  = 0.0               # offset or 'brightness', +/- 100 in steps of ten
 colormap = 0
 font=cv2.FONT_HERSHEY_SIMPLEX
-dispFullscreen = False
+fullscreen = False
+rotate = 0                # image not rotated, 0..3 clockwise
 cv2.namedWindow('Thermal',cv2.WINDOW_GUI_NORMAL)
 cv2.resizeWindow('Thermal', newWidth,newHeight)
 rad = 0 #blur radius
-threshold = 2
-hud = True
+threshold = 3
+osd = True
 recording = False
 elapsed = "00:00:00"
 snaptime = "None"
@@ -219,38 +221,44 @@ while(cap.isOpened()):
       cv2.putText(heatmap,str(temp)+' C', (int(newWidth/2)+10, int(newHeight/2)-10),\
       cv2.FONT_HERSHEY_SIMPLEX, 0.45,(0, 255, 255), 1, cv2.LINE_AA)
 
-      if hud==True:
+      if osd==True:
+         clYellow        = (  0,255,255)
+         clDarkWashedRed = ( 40, 40,255)
+
          # display black box for our data
-         cv2.rectangle(heatmap, (0, 0),(160, 120), (0,0,0), -1)
-         # put text in the box
-         cv2.putText(heatmap,'Avg Temp: '+str(avgtemp)+' C', (10, 14),\
-         cv2.FONT_HERSHEY_SIMPLEX, 0.4,(0, 255, 255), 1, cv2.LINE_AA)
+         cv2.rectangle(heatmap, (0, 0),(160, 160), (0,0,0), -1)
+         p = 14
 
-         cv2.putText(heatmap,'Label Threshold: '+str(threshold)+' C', (10, 28),\
-         cv2.FONT_HERSHEY_SIMPLEX, 0.4,(0, 255, 255), 1, cv2.LINE_AA)
+         cv2.putText(heatmap,'Scale (+/-): '+str(scale)    , (10, p), font, 0.4, clYellow, 1, cv2.LINE_AA)
+         p += 14
 
-         cv2.putText(heatmap,'Colormap: '+cmapText, (10, 42),\
-         cv2.FONT_HERSHEY_SIMPLEX, 0.4,(0, 255, 255), 1, cv2.LINE_AA)
+         cv2.putText(heatmap,'Blur (s): '+str(rad)         , (10, p), font, 0.4, clYellow, 1, cv2.LINE_AA)
+         p += 14
 
-         cv2.putText(heatmap,'Blur: '+str(rad)+' ', (10, 56),\
-         cv2.FONT_HERSHEY_SIMPLEX, 0.4,(0, 255, 255), 1, cv2.LINE_AA)
+         cv2.putText(heatmap,'Bright (b): '+str(beta)      , (10, p), font, 0.4, clYellow, 1, cv2.LINE_AA)
+         p += 14
 
-         cv2.putText(heatmap,'Scaling: '+str(scale)+' ', (10, 70),\
-         cv2.FONT_HERSHEY_SIMPLEX, 0.4,(0, 255, 255), 1, cv2.LINE_AA)
+         cv2.putText(heatmap,'Contrast (c): '+str(alpha)   , (10, p), font, 0.4, clYellow, 1, cv2.LINE_AA)
+         p += 14
 
-         cv2.putText(heatmap,'Contrast: '+str(alpha)+' ', (10, 84),\
-         cv2.FONT_HERSHEY_SIMPLEX, 0.4,(0, 255, 255), 1, cv2.LINE_AA)
+         cv2.putText(heatmap,'Colormap (v): '+cmapText     , (10, p), font, 0.4, clYellow, 1, cv2.LINE_AA)
+         p += 14
 
+         cv2.putText(heatmap,'Rotate (r): '+str(rotate*90) , (10, p), font, 0.4, clYellow, 1, cv2.LINE_AA)
+         p += 14
 
-         cv2.putText(heatmap,'Snapshot: '+snaptime+' ', (10, 98),\
-         cv2.FONT_HERSHEY_SIMPLEX, 0.4,(0, 255, 255), 1, cv2.LINE_AA)
+         cv2.putText(heatmap,'Menu (m): '+str(osd)         , (10, p), font, 0.4, clYellow, 1, cv2.LINE_AA)
+         p += 14
 
-         if recording == False:
-            cv2.putText(heatmap,'Recording: '+elapsed, (10, 112),\
-            cv2.FONT_HERSHEY_SIMPLEX, 0.4,(200, 200, 200), 1, cv2.LINE_AA)
-         if recording == True:
-            cv2.putText(heatmap,'Recording: '+elapsed, (10, 112),\
-            cv2.FONT_HERSHEY_SIMPLEX, 0.4,(40, 40, 255), 1, cv2.LINE_AA)
+         cv2.putText(heatmap,'Snapshot (CTRL+s)'           , (10, p), font, 0.4, clYellow, 1, cv2.LINE_AA)
+         p += 14
+
+         cv2.putText(heatmap,'Close (ESC or q)'            , (10, p), font, 0.4, clYellow, 1, cv2.LINE_AA)
+         p += 14
+
+         if recording:
+            cv2.putText(heatmap,'Recording: '+elapsed      , (10, p), font, 0.4, clDarkWashedRed, 1, cv2.LINE_AA)
+            p += 14
       
       #Yeah, this looks like we can probably do this next bit more efficiently!
       #display floating max temp
@@ -286,72 +294,69 @@ while(cap.isOpened()):
       keyPress = chr(keyPress)
       KEY_ESCAPE = chr(27)
       match(keyPress):
-         case 'a': #Increase blur radius
-            rad += 1
-         case 'z': #Decrease blur radius
-            rad -= 1
-            if rad <= 0:
-               rad = 0
-         case 's': #Increase threshold
-            threshold += 1
-         case 'x': #Decrease threashold
-            threshold -= 1
-            if threshold <= 0:
-               threshold = 0
-         case 'd': #Increase scale
-            scale += 1
-            if scale >=5:
-               scale = 5
-            newWidth = width*scale
-            newHeight = height*scale
-            if dispFullscreen == False and isPi == False:
-               cv2.resizeWindow('Thermal', newWidth,newHeight)
-         case 'c': #Decrease scale
-            scale -= 1
-            if scale <= 1:
-               scale = 1
-            newWidth = width*scale
-            newHeight = height*scale
-            if dispFullscreen == False and isPi == False:
-               cv2.resizeWindow('Thermal', newWidth,newHeight)
-         case 'q': #enable fullscreen
-            dispFullscreen = True
-            cv2.setWindowProperty('Thermal',cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
-         case 'w': #disable fullscreen
-            dispFullscreen = False
-            cv2.setWindowProperty('Thermal',cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_GUI_NORMAL)
-            cv2.resizeWindow('Thermal', newWidth,newHeight)
-         case 'f': #contrast+
+         case '+':        # increase scale
+            scale = min(6, scale + 1)
+            newWidth  = width  * scale 
+            newHeight = height * scale
+            if not fullscreen and not isPi:
+               cv2.resizeWindow('Thermal', newWidth, newHeight)
+         case '-':        # decrease scale
+            scale = max(1, scale - 1)
+            newWidth  = width  * scale 
+            newHeight = height * scale
+            if not fullscreen and not isPi:
+               cv2.resizeWindow('Thermal', newWidth, newHeight)
+         case 'f':        # toggle fullscreen
+            fullscreen = not fullscreen
+            if fullscreen:
+               cv2.setWindowProperty('Thermal', cv2.WND_PROP_FULLSCREEN, 1.0);
+            else:
+               cv2.setWindowProperty('Thermal', cv2.WND_PROP_FULLSCREEN, 0.0);
+               cv2.resizeWindow('Thermal', newWidth, newHeight);
+         case 'm':        # toggle menu
+            osd = not osd
+         case 'b':        # toggle through brightnesss values
+            beta += 10.0
+            beta = round(beta,0)
+            if beta > 100.01:
+               beta = -100
+         case 'c':        # toggle through contrast values
             alpha += 0.1
             alpha = round(alpha,1)#fix round error
-            if alpha >= 3.0:
-               alpha=3.0
-         case 'v': #contrast-
-            alpha -= 0.1
-            alpha = round(alpha,1)#fix round error
-            if alpha<=0:
+            if alpha >= 3.01:
                alpha = 0.0
-         case 'h':
-            if hud==True:
-               hud=False
-            elif hud==False:
-               hud=True
-         case 'm': #m to cycle through color maps
-            colormap += 1
-            if colormap == 11:
-               colormap = 0
-         case 'r':
-            if notrecording: #r to start reording
-               videoOut = rec()
-               recording = True
-               start = time.time()
-         case 't': #f to finish reording
-            recording = False
-            elapsed = "00:00:00"
-         case 'p': #f to finish reording
+         case 'r':        # rotate clockwise
+            rotate += 1
+            if rotate > 3:
+               rotate = 0
+            tmp = width
+            width = height
+            height = tmp
+            newWidth  = width  * scale
+            newHeight = height * scale
+            if not fullscreen:
+               cv2.resizeWindow('Thermal', newWidth, newHeight);
+         case 's':        # toggle through image smoothing radius values
+            rad += 1
+            if rad > 5:
+               rad = 0
+         case 'p':        # print snapshot to png 
             snaptime = snapshot(heatmap)
-         case KEY_ESCAPE: # ESC
+
+         case '0':
+            recording = not recording
+            if recording:
+               videoOut = rec()
+               start = time.time()
+            else:
+               elapsed = "00:00:00"
+         case 'v':
+            colormap = (colormap + 1) % 11
+         case 'q':        # exit program
             break
+         case KEY_ESCAPE: # exit program
+            break
+
 cap.release()
 cv2.destroyAllWindows()
       
