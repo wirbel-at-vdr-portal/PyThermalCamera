@@ -13,17 +13,17 @@ print('This will work on the Pi However a number of workarounds are implemented!
 print('Seemingly there are bugs in the compiled version of cv2 that ships with the Pi!')
 print('')
 print('Key Bindings:')
-print("+ or -: change window size and bicubic interpolated scale")
-print("f     : toggle fullscreen window")
+print("+, -  : increase/decrease scale and image size")
+print("f     : toggle fullscreen")
 print("m     : toggle menu")
-print("b     : toggle through brightness values")
-print("c     : toggle through contrast vallues")
+print("b     : toggle through brightnesss values")
+print("c     : toggle through contrast values")
 print("r     : rotate clockwise")
-print("s     : toggle through image smoothing radius values")
-print("v     : cycle through color maps")
-print("CTRL+s: snapshot to png")
-print("0     : toggle video recording")
-print("ESC, q: quit program")
+print("CTRL+s: print snapshot to png")
+print("0     : toggle recording")
+print("v     : toggle colormap")
+print("q, ESC: quit program")
+
 
 import cv2
 import numpy as np
@@ -83,7 +83,7 @@ rotate = 0                # image not rotated, 0..3 clockwise
 cv2.namedWindow('Thermal',cv2.WINDOW_GUI_NORMAL)
 cv2.resizeWindow('Thermal', newWidth,newHeight)
 rad = 0 #blur radius
-threshold = 3
+threshold = 2
 osd = True
 recording = False
 elapsed = "00:00:00"
@@ -161,8 +161,15 @@ while(cap.isOpened()):
 
       # Convert the real image to RGB
       bgr = cv2.cvtColor(imdata,  cv2.COLOR_YUV2BGR_YUYV)
-      #Contrast
-      bgr = cv2.convertScaleAbs(bgr, alpha=alpha)#Contrast
+
+      # rotate = 0..3 -> 0 .. 270
+      # -> rotating image requires resizeWindow, otherwise the image would be distorted
+      if rotate > 0:
+         bgr = cv2.rotate(bgr, rotate-1);
+
+      # brightness and contrast
+      bgr = cv2.convertScaleAbs(bgr, alpha=alpha, beta=beta)
+
       #bicubic interpolate, upscale and blur
       bgr = cv2.resize(bgr,(newWidth,newHeight),interpolation=cv2.INTER_CUBIC)#Scale up!
       if rad>0:
@@ -223,7 +230,13 @@ while(cap.isOpened()):
 
       if osd==True:
          clYellow        = (  0,255,255)
+         clTelegrey4     = (200,200,200)
          clDarkWashedRed = ( 40, 40,255)
+
+         if recording:
+            recColor = clDarkWashedRed
+         else:
+            recColor = clTelegrey4
 
          # display black box for our data
          cv2.rectangle(heatmap, (0, 0),(160, 160), (0,0,0), -1)
@@ -253,12 +266,13 @@ while(cap.isOpened()):
          cv2.putText(heatmap,'Snapshot (CTRL+s)'           , (10, p), font, 0.4, clYellow, 1, cv2.LINE_AA)
          p += 14
 
+         cv2.putText(heatmap,'Recording: '+elapsed         , (10, p), font, 0.4, recColor, 1, cv2.LINE_AA)
+         p += 14
+
          cv2.putText(heatmap,'Close (ESC or q)'            , (10, p), font, 0.4, clYellow, 1, cv2.LINE_AA)
          p += 14
 
-         if recording:
-            cv2.putText(heatmap,'Recording: '+elapsed      , (10, p), font, 0.4, clDarkWashedRed, 1, cv2.LINE_AA)
-            p += 14
+
       
       #Yeah, this looks like we can probably do this next bit more efficiently!
       #display floating max temp
